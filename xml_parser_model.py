@@ -16,7 +16,7 @@ class ParserPep:
         self.root = ""
         self._init_root_and_namespace()
         self.c = 0
-        self.label_mode = mode
+        self.running_mode = mode
 
     # there is a namespace before root, it is pain in the ass
     # so this function cut it so other functions in ElementTree would work properly
@@ -24,7 +24,17 @@ class ParserPep:
         m = re.match(r'\{.*\}', element.tag)
         return m.group(0) if m else ''
 
-    #def _modification_k(self,):
+
+    def _modification_k(self,seq, k_mod):
+        """
+        added option : k modifications - heavy = 162 and light is unmarked! (just "k")
+
+        """
+        if re.match('n\[29\].', k_mod) != None or re.match('n\[15\].', k_mod)!= None:
+            self.dict_peptides[seq].add_n_light()
+        elif re.match('n\[35\].', k_mod) != None or re.match('n\[18\].', k_mod)!= None:
+            self.dict_peptides[seq].add_n_heavy()
+
 
     # check if there is modification in the n term
     # start with "n[29 |15|18 | 35] then the seq of peptide
@@ -83,8 +93,7 @@ class ParserPep:
             # print(probability)
             if probability < error_rate:
                 continue
-            if not self.label_mode:
-                assert (self.label_mode == 0)
+            if self.running_mode == "default":
                 heavy = x.find('.//' + self.namespace + 'xpressratio_result')
                 if heavy != None:
                     heavy = heavy.attrib['heavy_area']
@@ -99,8 +108,7 @@ class ParserPep:
                     continue
 
                 mod = x.find('.//' + self.namespace + 'modification_info')
-            elif self.label_mode:
-                assert (self.label_mode == 1)
+            elif self.running_mode == "label":
                 mod = None
                 matched_ions = x.attrib['num_matched_ions']
                 label_free_res = x.find('.//' + self.namespace + 'xpresslabelfree_result')
@@ -121,7 +129,7 @@ class ParserPep:
             seq = x.attrib['peptide']
             if seq in self.dict_peptides:
                 self.dict_peptides[seq].add_counter()   # in all modes
-                if not self.label_mode:
+                if self.running_mode == "default":
                     self.dict_peptides[seq].add_heavy(heavy)
                     self.dict_peptides[seq].add_light(light)
                     if mod != None:
@@ -129,7 +137,7 @@ class ParserPep:
                         self._modification_n(seq, mod)
                     #self.dict_peptides[seq].print_peptide()
                     continue
-                elif self.label_mode:
+                elif self.running_mode == "label":
                     self.dict_peptides[seq].add_peak_area(peak_area)
                     self.dict_peptides[seq].add_avg_rt_seconds(rt_seconds)
                     self.dict_peptides[seq].add_peak_intensity(peak_intensity)
@@ -158,15 +166,14 @@ class ParserPep:
 
             start = x.attrib['peptide_prev_aa']
             end = x.attrib['peptide_next_aa']
-            if not self.label_mode:
+            if self.running_mode == "default":
                 # -1 for peak_area, peak intensity, rt_seconds, ions
-                assert (self.label_mode == 0)
                 self.dict_peptides[seq] = Peptide(seq, pep_type, prot, list_alternative, probability, start, end, heavy,
-                                                  light, -1, -1, -1, -1, self.label_mode)
-            elif self.label_mode:
+                                                  light, -1, -1, -1, -1, self.running_mode)
+            elif self.running_mode == "label":
                 # -1 for heavy and light
                 self.dict_peptides[seq] = Peptide(seq, pep_type, prot, list_alternative, probability, start, end, -1,
-                                                  -1, peak_area,peak_intensity, rt_seconds, matched_ions, self.label_mode)
+                                                  -1, peak_area,peak_intensity, rt_seconds, matched_ions, self.running_mode)
             else:
                 print("shouldnt get here!!")
                 exit(1)
@@ -203,7 +210,7 @@ class Peptide:
         self.ions: int = ions                 # number of matched ions - for label-free mode
         self.ratio: str = "0"                 # light / heavy. if heavy=0 ratio=-1
         self.mode: int = mode                 # is it free- label (==1) or not (==0)
-        if not self.mode:
+        if self.mode == "default":
             self._calc_ratio()
 
     def add_n_heavy(self):
@@ -265,7 +272,7 @@ class Peptide:
         print("n light is " + str(self.n_light))
         print("**********************")
 
-    def class_to_list(self, mode_label):
+    def class_to_list(self, mode):
         pep = []
         pep.append(self.seq)
         pep.append(self.pep_type)
@@ -275,13 +282,13 @@ class Peptide:
         pep.append(self.start)
         pep.append(self.end)
         pep.append(self.counter)
-        if not mode_label:
+        if mode == "default":
             pep.append(self.n_heavy)
             pep.append(self.n_light)
             pep.append(self.heavy)
             pep.append(self.light)
             pep.append(self.ratio)
-        elif mode_label:
+        elif mode == "label":
             pep.append(self.peak_area)
             pep.append(self.peak_intensity)
             pep.append(self.rt_seconds)
@@ -300,19 +307,17 @@ class United:
     count all appearances in all files
     ratios separately
     """
-    def __init__(self, seq, prot, count, num_of_files, mode_label, start, end):
+    def __init__(self, seq, prot, count, num_of_files, mode, start, end):
         self.seq: str = seq
         self.protein: str = prot
         self. sum_count: int = count
         self.start = start
         self.end = end
         self.ratio_dict = {}
-        if not mode_label:
-            assert (mode_label == 0)
+        if mode == "default":
             for i in range(num_of_files):
                 self.ratio_dict[i] = ""
-        elif mode_label:
-            assert (mode_label == 1)
+        elif mode == "label":
             self.count_dict = {}
             for i in range(num_of_files):
                 self.count_dict[i] = ""
@@ -332,7 +337,7 @@ class United:
         self.avg = -1
         self.median = -1
         self.st_deviation = -1
-        self.mode_label = mode_label
+        self.mode = mode
 
     def add_sum_count(self, count):
         self.sum_count += count
@@ -361,14 +366,14 @@ class United:
         pep.append(self.sum_count)
         pep.append(self.start)
         pep.append(self.end)
-        if mode == 0:
+        if mode == "default":
             for i in range(len(self.ratio_dict)):
                 pep.append(self.ratio_dict[i])
             pep.append(self.avg)
             pep.append(self.median)
             pep.append(self.st_deviation)
 
-        elif mode == 1:
+        elif mode == "label":
             for i in range(len(self.count_dict)):
                 pep.append(self.count_dict[i])
             for i in range(len(self.peak_area_dict)):
@@ -417,7 +422,7 @@ class Model:
         else:
             return "Valid"
 
-    def xlsx_create(self, output_file_name, dict_peptides, header, mode_label):
+    def xlsx_create(self, output_file_name, dict_peptides, header, mode):
         """"
         export the data to excel sheet
         """
@@ -430,7 +435,7 @@ class Model:
         # col and raw are just for the for iterations below
         row = 1
         for pep in dict_peptides:
-            ll = dict_peptides[pep].class_to_list(mode_label)
+            ll = dict_peptides[pep].class_to_list(mode)
             if headers_len == 17:
                 print("headers len is " + str(headers_len))
                 print("ll len is " + str(len(ll)))
@@ -445,15 +450,15 @@ class Model:
 
     def header_unite_create(self, num_of_files, mode):
         headers = ["seq", "protein", "counter all", "start", "end"]
-        if not mode:
-            assert (mode == 0)
+        if mode == "default":
+            #assert (mode == 0)
             for i in range(num_of_files):
                 headers.append("ratio" + str(i + 1))
             headers.append("mean")
             headers.append("median")
             headers.append("st dev")
-        elif mode:
-            assert (mode == 1)
+        elif mode == "label":
+            #assert (mode == 1)
             for i in range(num_of_files):
                 headers.append("count in file " + str(i + 1))
             for i in range(num_of_files):
@@ -467,18 +472,18 @@ class Model:
 
         return headers
 
-    def file_parse(self, file_name, output_name, error_rate, mode_label_free):
-        f = ParserPep(file_name, mode_label_free)
+    def file_parse(self, file_name, output_name, error_rate, mode):
+        f = ParserPep(file_name, mode)
         f.parse_dict(error_rate)
         dict_f = f.dict_peptides
-        if not mode_label_free:
+        if mode == "default" :
             headers = ["seq", "type(semi/full)", "protein", "alternative protein", "probability", "start", "end", "counter",
                        "n mod heavy", "n mod light", "sum heavy", "sum light", "ratio"]
-            self.xlsx_create(output_name, dict_f, headers, mode_label_free)
-        elif mode_label_free:
+            self.xlsx_create(output_name, dict_f, headers, mode)
+        elif mode == "label":
             headers = ["seq", "type(semi/full)", "protein", "alternative protein", "probability", "start", "end",
                        "counter", "sum peak area", "sum peak intensity", "avg rt seconds", "matched ions"]
-            self.xlsx_create(output_name, dict_f, headers, mode_label_free)
+            self.xlsx_create(output_name, dict_f, headers, mode)
 
         return dict_f
 

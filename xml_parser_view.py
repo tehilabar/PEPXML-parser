@@ -8,6 +8,7 @@ from itertools import count
 from xml_parser_model import Model, United
 import threading
 
+
 MAIN_FONT = ("Arial Bold", 10)
 
 
@@ -25,8 +26,9 @@ class Controller(tk.Tk):
         #   cat icon misbehaving in linux
         #tk.Tk.iconbitmap(self, default="catIcon.ico")
         self.error_rate_button = tk.StringVar()     # 0/ 0.01 / 0.005 / 0.001
+        self.running_options = tk.StringVar()       # "default" "label" or "lysine"
         self.output_entry = ""  # name of united file output
-        self.label_free = tk.IntVar()   # if 1 than consider
+        #self.label_free = tk.IntVar()   # if 1 than consider
         self._initialize_radio_buttons()
         self.title("PEP-XML PARSER")
         self.container = tk.Frame(self)
@@ -45,7 +47,8 @@ class Controller(tk.Tk):
             print(str(i+1) + "   " + str(f))
 
     def _initialize_radio_buttons(self):
-        self.label_free.set(0)
+        #self.label_free.set(0)
+        self.running_options.set("-1")
         self.error_rate_button.set("-1")
 
     def choose_file(self):
@@ -71,8 +74,11 @@ class Controller(tk.Tk):
         if self.output_entry.get() == "":
             self.error_message("Invalid entry", "Please enter output file name")
             return
-        if self.error_rate_button.get() == -1:
+        if self.error_rate_button.get() == "-1":
             self.error_message("Invalid choice", "Please choose error rate")
+            return
+        if self.running_options.get() == "-1":
+            self.error_message("Invalid choice", "Please choose running mod")
             return
         self._print_file_numbers()
         # print("output - error- lable-free")
@@ -101,47 +107,47 @@ class Controller(tk.Tk):
         for f in self.files:
             #parser files one by one. add to the dict-list after parsing
             #output name is with "_out" ending
-            try:
-                self.dict_list.append(self.model.file_parse(f, str(f + '_out'), self.error_rate_button.get(),
-                                                            self.label_free.get()))
-            except:
+            #try:
+            self.dict_list.append(self.model.file_parse(f, str(f + '_out'), self.error_rate_button.get(),
+                                                            self.running_options.get()))
+            #except:
                 # it is kinda early stage to put a try-catch but i could not predict what will go wrong in the parser
                 # and i didnt want it to have an interpreter error but a gui one
                 # so i catch them all like pokemons
-                self.error_message("Invalid file", "Cannot parse\ncould be wrong label mode or an open xlsx in use")
-                os._exit(1)
+                #self.error_message("Invalid file", "Cannot parse\ncould be wrong mode or an open xlsx in use")
+                #os._exit(1)
 
         n = len(self.dict_list)
         assert (n == len(self.files))
-        print("all ok until united")
+        #print("all ok until united")
         #exit(0)
         merge_dict = {}
         for i, d in zip(range(n), self.dict_list):
             for seq in d:
                 if seq not in merge_dict:
-                    merge_dict[seq] = United(seq, d[seq].prot, d[seq].counter, n, self.label_free.get(), d[seq].start,
+                    merge_dict[seq] = United(seq, d[seq].prot, d[seq].counter, n, self.running_options.get(), d[seq].start,
                                              d[seq].end)
-                    if self.label_free.get() == 0:
+                    if self.running_options.get() == "default":
                         merge_dict[seq].add_ratio(i, d[seq].ratio)
-                    elif self.label_free.get() == 1:
+                    elif self.running_options.get() == "label":
                         merge_dict[seq].add_all_label_mode(i, d[seq].counter, d[seq].peak_area,
                                                            d[seq].peak_intensity, d[seq].rt_seconds, d[seq].ions)
 
                 else:
                     assert merge_dict[seq]
                     merge_dict[seq].add_sum_count(d[seq].counter)
-                    if self.label_free.get() == 0:
+                    if self.running_options.get() == "default":
                         merge_dict[seq].add_ratio(i, d[seq].ratio)
 
-                    if self.label_free.get() == 1:
+                    if self.running_options.get() == "label":
                         merge_dict[seq].add_all_label_mode(i, d[seq].counter, d[seq].peak_area,
                                                            d[seq].peak_intensity, d[seq].rt_seconds, d[seq].ions)
 
                 # merge_dict[seq].print_united()
         #################################
         #TO DO - this should be in Model!! not in controller!!
-        unite_header = self.model.header_unite_create(n, self.label_free.get())
-        self.model.xlsx_create(self.output_entry.get(), merge_dict, unite_header, self.label_free.get())
+        unite_header = self.model.header_unite_create(n, self.running_options.get())
+        self.model.xlsx_create(self.output_entry.get(), merge_dict, unite_header, self.running_options.get())
         ################################3
         self.error_message("Success", "Done!")
         # did not find non-blocking join in python :( if i dont use os exit the other thread just keep running forever
@@ -170,7 +176,6 @@ class StartPage(tk.Frame):
         request_file = tk.Label(self, text="Select all pep.xml files", font=MAIN_FONT, fg="LightBlue4")
         request_file.grid(column=0, row=0, padx=20, pady=10)
         button_browse = ttk.Button(self, text=" Browse ", command=self.controller.choose_file)
-
         button_browse.grid(column=0, row=1)
         file_ok = tk.Label(self, text="No files selected yet", font=("David", 10), fg="dim gray")
         file_ok.grid(column=0, row=2)
@@ -188,14 +193,25 @@ class StartPage(tk.Frame):
         error_001.grid(column=0, row=7)
         error_005.grid(column=0, row=8)
         error_01.grid(column=0, row=9)
-        label_free = tk.Checkbutton(self, text="Label free mode", variable=self.controller.label_free,
-                                font=MAIN_FONT, fg="LightBlue4")
-        label_free.grid(column=0, row=10, pady=7)
+        request_mod = tk.Label(self, text="Select running mod", font=MAIN_FONT, fg="LightBlue4")
+        request_mod.grid(column=0, row=10, pady=5)
+        default_mod = tk.Radiobutton(self, text="Default   ", variable=self.controller.running_options, value="default")
+        label_free_mod = tk.Radiobutton(self, text="Label free", variable=self.controller.running_options,
+                                        value="label")
+        lysin_uniform_mod = tk.Radiobutton(self, text="K uniform", variable=self.controller.running_options,
+                                           value="lysine")
+        default_mod.grid(column=0, row=11)
+        label_free_mod.grid(column=0, row=12)
+        lysin_uniform_mod.grid(column=0, row=13)
+
+        #label_free = tk.Checkbutton(self, text="Label free mode", variable=self.controller.label_free,
+                                #font=MAIN_FONT, fg="LightBlue4")
+        #label_free.grid(column=0, row=10, pady=7)
         # TO DO!!!
         # i change it to "run" (used to be "next") button in the gui because im not using the second page
         # so it is actualy calling the "next" function and "next"  function call "run" function inside
         run_button = ttk.Button(self, text="Run", command=lambda: self.controller.next())
-        run_button.grid(column=0, row=11, padx=20, pady=10)
+        run_button.grid(column=0, row=14, padx=20, pady=15)
         # lbl = ImageLabel(self)
         # lbl.grid(column=0)
         # lbl.load('phage.gif')
