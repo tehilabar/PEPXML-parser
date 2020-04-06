@@ -24,16 +24,43 @@ class ParserPep:
         m = re.match(r'\{.*\}', element.tag)
         return m.group(0) if m else ''
 
-
-    def _modification_k(self,seq, k_mod):
+    # def k_count(self, seq: str):
+    #     """
+    #     how many lysines(unmarked+heavy) in peptide
+    #     """
+    #     return seq.count("K")
+    # def k_heavy_count(self, seq: str, counter_all):
+    #     """
+    #     how many heavy lysines (marked K[162]) in peptide
+    #     param "counter_all" is the return value of k_count - just for assertion
+    #     """
+    #     temp = seq.count("K[162]")
+    #     assert (temp >= counter_all)
+    #     return temp
+    def k_peptide_type(self, seq):
         """
-        added option : k modifications - heavy = 162 and light is unmarked! (just "k")
-
+        this function is relevant only for "lysine" mode (so far)
+        if the peptide have no lysines(K) in it - return "no k"
+        if the peptide is heavy == all lysines are [162] - return "heavy"
+        id the peptide is light == all lysines are unmarked - return "light"
+        if the peptide is mixed (heavy&light) - return "bad kitty"
         """
-        if re.match('n\[29\].', k_mod) != None or re.match('n\[15\].', k_mod)!= None:
-            self.dict_peptides[seq].add_n_light()
-        elif re.match('n\[35\].', k_mod) != None or re.match('n\[18\].', k_mod)!= None:
-            self.dict_peptides[seq].add_n_heavy()
+        k_all = seq.count("K")
+        k_heavy = seq.count("K[162]")
+        if k_all == 0:
+            # no lysines in pep
+            return "no k"
+        elif k_heavy == k_all:
+            assert (k_all > 0)
+            return "heavy"
+        elif k_heavy < k_all:
+            return "bad kitty"
+        elif k_heavy > k_all:
+            print("shouldnt be here")
+            exit(0)
+        else:
+            assert (k_all > 0)
+            return "light"
 
 
     # check if there is modification in the n term
@@ -79,7 +106,6 @@ class ParserPep:
         error_rate = self._calc_error_rate(error_rate)
         # print (name_space)
         hits = self.root.findall('.//' + self.namespace + 'search_hit')
-        # print (len(hits))
         #dict_peptides = {}
         counter = 0
         for x in hits:
@@ -121,6 +147,8 @@ class ParserPep:
                     peak_intensity = float(peak_intensity)
                 else:
                     continue
+
+            elif self.running_mode == "lysine"
 
             else:
                 print("shouldnt get here!!")

@@ -119,8 +119,8 @@ class Controller(tk.Tk):
 
         n = len(self.dict_list)
         assert (n == len(self.files))
-        #print("all ok until united")
-        #exit(0)
+        print("all ok until united")
+        exit(0)
         merge_dict = {}
         for i, d in zip(range(n), self.dict_list):
             for seq in d:
@@ -193,12 +193,14 @@ class StartPage(tk.Frame):
         error_001.grid(column=0, row=7)
         error_005.grid(column=0, row=8)
         error_01.grid(column=0, row=9)
-        request_mod = tk.Label(self, text="Select running mod", font=MAIN_FONT, fg="LightBlue4")
+        request_mod = tk.Label(self, text="Select running mode", font=MAIN_FONT, fg="LightBlue4")
         request_mod.grid(column=0, row=10, pady=5)
-        default_mod = tk.Radiobutton(self, text="Default   ", variable=self.controller.running_options, value="default")
-        label_free_mod = tk.Radiobutton(self, text="Label free", variable=self.controller.running_options,
+        default_mod = tk.Radiobutton(self, text="Default                    ",
+                                     variable=self.controller.running_options, value="default")
+        label_free_mod = tk.Radiobutton(self, text="Label free                 ",
+                                        variable=self.controller.running_options,
                                         value="label")
-        lysin_uniform_mod = tk.Radiobutton(self, text="K uniform", variable=self.controller.running_options,
+        lysin_uniform_mod = tk.Radiobutton(self, text="K & uniform n-term", variable=self.controller.running_options,
                                            value="lysine")
         default_mod.grid(column=0, row=11)
         label_free_mod.grid(column=0, row=12)
