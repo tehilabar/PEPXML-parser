@@ -30,9 +30,9 @@ class ParserPep:
     # start with "n[29 |15|18 | 35] then the seq of peptide
     def _modification_n(self, seq, mod):
         #self.c += 1
-        if re.match('n\[29\].', mod) != None: #or re.match('n\[15\].', mod)!= None:
+        if re.match('n\[29\].', mod) != None or re.match('n\[15\].', mod)!= None:
             self.dict_peptides[seq].add_n_light()
-        elif re.match('n\[35\].', mod) != None:# or re.match('n\[18\].', mod)!= None:
+        elif re.match('n\[35\].', mod) != None or re.match('n\[18\].', mod)!= None:
             self.dict_peptides[seq].add_n_heavy()
 
 
