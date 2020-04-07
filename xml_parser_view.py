@@ -107,20 +107,20 @@ class Controller(tk.Tk):
         for f in self.files:
             #parser files one by one. add to the dict-list after parsing
             #output name is with "_out" ending
-            #try:
-            self.dict_list.append(self.model.file_parse(f, str(f + '_out'), self.error_rate_button.get(),
+            try:
+                self.dict_list.append(self.model.file_parse(f, str(f + '_out'), self.error_rate_button.get(),
                                                             self.running_options.get()))
-            #except:
+            except:
                 # it is kinda early stage to put a try-catch but i could not predict what will go wrong in the parser
                 # and i didnt want it to have an interpreter error but a gui one
                 # so i catch them all like pokemons
-                #self.error_message("Invalid file", "Cannot parse\ncould be wrong mode or an open xlsx in use")
-                #os._exit(1)
+                self.error_message("Invalid file", "Cannot parse\ncould be wrong mode or an open xlsx in use")
+                os._exit(1)
 
         n = len(self.dict_list)
         assert (n == len(self.files))
         print("all ok until united")
-        exit(0)
+        #exit(0)
         merge_dict = {}
         for i, d in zip(range(n), self.dict_list):
             for seq in d:

@@ -212,11 +212,11 @@ class ParserPep:
                         self._modification_n(seq, mod)
                         #self.dict_peptides[seq].print_peptide()
                         continue
-                    elif self.running_mode == "label":
-                        self.dict_peptides[seq].add_peak_area(peak_area)
-                        self.dict_peptides[seq].add_avg_rt_seconds(rt_seconds)
-                        self.dict_peptides[seq].add_peak_intensity(peak_intensity)
-                        continue
+                elif self.running_mode == "label":
+                    self.dict_peptides[seq].add_peak_area(peak_area)
+                    self.dict_peptides[seq].add_avg_rt_seconds(rt_seconds)
+                    self.dict_peptides[seq].add_peak_intensity(peak_intensity)
+                    continue
                 else:
                     print("shouldnt get here1!!")
                     exit(1)
@@ -246,7 +246,7 @@ class ParserPep:
                                                   light, -1, -1, -1, -1, self.running_mode)
                 if self.running_mode == "lysine":
                     if(k_type == "no k"):
-                        print(k_type)
+                        #print(k_type)
                         self.dict_peptides[seq].add_no_k()
             elif self.running_mode == "label":
                 # -1 for heavy and light
