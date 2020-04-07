@@ -127,7 +127,7 @@ class Controller(tk.Tk):
                 if seq not in merge_dict:
                     merge_dict[seq] = United(seq, d[seq].prot, d[seq].counter, n, self.running_options.get(), d[seq].start,
                                              d[seq].end)
-                    if self.running_options.get() == "default":
+                    if self.running_options.get() == "default" or self.running_options.get() == "lysine":
                         merge_dict[seq].add_ratio(i, d[seq].ratio)
                     elif self.running_options.get() == "label":
                         merge_dict[seq].add_all_label_mode(i, d[seq].counter, d[seq].peak_area,
@@ -136,7 +136,7 @@ class Controller(tk.Tk):
                 else:
                     assert merge_dict[seq]
                     merge_dict[seq].add_sum_count(d[seq].counter)
-                    if self.running_options.get() == "default":
+                    if self.running_options.get() == "default" or self.running_options.get() == "lysine":
                         merge_dict[seq].add_ratio(i, d[seq].ratio)
 
                     if self.running_options.get() == "label":

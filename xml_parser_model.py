@@ -37,7 +37,11 @@ class ParserPep:
     #     temp = seq.count("K[162]")
     #     assert (temp >= counter_all)
     #     return temp
-    def k_peptide_type(self, seq):
+
+    def little_test(self, mod: str):
+        assert (mod.count("[43]") == 1)
+
+    def _k_peptide_type(self, seq):
         """
         this function is relevant only for "lysine" mode (so far)
         if the peptide have no lysines(K) in it - return "no k"
@@ -47,20 +51,21 @@ class ParserPep:
         """
         k_all = seq.count("K")
         k_heavy = seq.count("K[162]")
+        k_light = k_all - k_heavy
         if k_all == 0:
             # no lysines in pep
             return "no k"
         elif k_heavy == k_all:
             assert (k_all > 0)
+            assert (k_light == 0)
             return "heavy"
-        elif k_heavy < k_all:
-            return "bad kitty"
-        elif k_heavy > k_all:
-            print("shouldnt be here")
-            exit(0)
+        elif k_light == k_all:
+            assert (k_all > 0)
+            assert (k_heavy == 0)
+            return "light"
         else:
             assert (k_all > 0)
-            return "light"
+            return "bad kitty"
 
 
     # check if there is modification in the n term
@@ -148,31 +153,72 @@ class ParserPep:
                 else:
                     continue
 
-            elif self.running_mode == "lysine"
-
-            else:
-                print("shouldnt get here!!")
-                exit(1)
-
+            # else:
+            #     print("shouldnt get here!!")
+            #     exit(1)
+            if self.running_mode == "lysine":
+                mod = x.find('.//' + self.namespace + 'modification_info')
+                #print("bloop")
+                #print(mod)
+                if mod != None:
+                    mod = mod.attrib['modified_peptide']
+                    #print(mod)
+                    k_type = self._k_peptide_type(mod)
+                    if k_type == "bad kitty":
+                        continue
+                    else:
+                        heavy = x.find('.//' + self.namespace + 'xpressratio_result')
+                        if heavy != None:
+                            heavy = heavy.attrib['heavy_area']
+                            heavy = float(heavy)
+                        elif k_type == "no k":
+                            heavy = 0
+                        else:
+                            continue
+                        light = x.find('.//' + self.namespace + 'xpressratio_result')
+                        if light != None:
+                            light = light.attrib['light_area']
+                            light = float(light)
+                        elif k_type == "no k":
+                            light = 0
+                        else:
+                            continue
+                else:
+                    continue
             seq = x.attrib['peptide']
             if seq in self.dict_peptides:
                 self.dict_peptides[seq].add_counter()   # in all modes
+                if self.running_mode == "lysine":
+                    #print("here")
+                    self.little_test(str(mod))
+                    k_type = self._k_peptide_type(mod)
+                    assert (k_type != "bad kitty")
+                    self.dict_peptides[seq].add_heavy(heavy)
+                    self.dict_peptides[seq].add_light(light)
+                    if k_type == "heavy":
+                        self.dict_peptides[seq].add_n_heavy()
+                    elif k_type == "light":
+                        self.dict_peptides[seq].add_n_light()
+                    else:
+                        assert (k_type == "no k")
+                        self.dict_peptides[seq].add_no_k()
+
+                    continue
                 if self.running_mode == "default":
                     self.dict_peptides[seq].add_heavy(heavy)
                     self.dict_peptides[seq].add_light(light)
                     if mod != None:
                         mod = mod.attrib['modified_peptide']
                         self._modification_n(seq, mod)
-                    #self.dict_peptides[seq].print_peptide()
-                    continue
-                elif self.running_mode == "label":
-                    self.dict_peptides[seq].add_peak_area(peak_area)
-                    self.dict_peptides[seq].add_avg_rt_seconds(rt_seconds)
-                    self.dict_peptides[seq].add_peak_intensity(peak_intensity)
-                    continue
-
+                        #self.dict_peptides[seq].print_peptide()
+                        continue
+                    elif self.running_mode == "label":
+                        self.dict_peptides[seq].add_peak_area(peak_area)
+                        self.dict_peptides[seq].add_avg_rt_seconds(rt_seconds)
+                        self.dict_peptides[seq].add_peak_intensity(peak_intensity)
+                        continue
                 else:
-                    print("shouldnt get here!!")
+                    print("shouldnt get here1!!")
                     exit(1)
 
             pep_type = x.attrib['num_tol_term']
@@ -194,22 +240,34 @@ class ParserPep:
 
             start = x.attrib['peptide_prev_aa']
             end = x.attrib['peptide_next_aa']
-            if self.running_mode == "default":
+            if self.running_mode == "default" or self.running_mode == "lysine":
                 # -1 for peak_area, peak intensity, rt_seconds, ions
                 self.dict_peptides[seq] = Peptide(seq, pep_type, prot, list_alternative, probability, start, end, heavy,
                                                   light, -1, -1, -1, -1, self.running_mode)
+                if self.running_mode == "lysine":
+                    if(k_type == "no k"):
+                        print(k_type)
+                        self.dict_peptides[seq].add_no_k()
             elif self.running_mode == "label":
                 # -1 for heavy and light
                 self.dict_peptides[seq] = Peptide(seq, pep_type, prot, list_alternative, probability, start, end, -1,
                                                   -1, peak_area,peak_intensity, rt_seconds, matched_ions, self.running_mode)
             else:
-                print("shouldnt get here!!")
+                print("shouldnt get here2!!")
                 exit(1)
-
-            if mod != None:
-                mod = mod.attrib['modified_peptide']
-                self._modification_n(seq, mod)
-            #self.dict_peptides[seq].print_peptide()
+            if self.running_mode == "default":
+                if mod != None:
+                    #assert (self.running_mode == "default")
+                    mod = mod.attrib['modified_peptide']
+                    self._modification_n(seq, mod)
+                #self.dict_peptides[seq].print_peptide()
+            elif self.running_mode == "lysine":
+                k_type = self._k_peptide_type(mod)
+                assert (k_type != "bad kitty")
+                if k_type == "heavy":
+                    self.dict_peptides[seq].add_n_heavy()
+                elif k_type == "light":
+                    self.dict_peptides[seq].add_n_light()
 
 
 class Peptide:
@@ -238,7 +296,8 @@ class Peptide:
         self.ions: int = ions                 # number of matched ions - for label-free mode
         self.ratio: str = "0"                 # light / heavy. if heavy=0 ratio=-1
         self.mode: int = mode                 # is it free- label (==1) or not (==0)
-        if self.mode == "default":
+        self.no_k: int = 0                    # used only for uniform n k running mode to sum up the ynmarked peps
+        if self.mode == "default" or self.mode == "lysine":
             self._calc_ratio()
 
     def add_n_heavy(self):
@@ -259,6 +318,9 @@ class Peptide:
         self.light += new_light
         # recalcing ratio
         self._calc_ratio()
+
+    def add_no_k(self):
+        self.no_k += 1
 
     def add_peak_area(self, new_peak):
         self.peak_area += new_peak
@@ -310,9 +372,11 @@ class Peptide:
         pep.append(self.start)
         pep.append(self.end)
         pep.append(self.counter)
-        if mode == "default":
+        if mode == "default" or mode == "lysine":
             pep.append(self.n_heavy)
             pep.append(self.n_light)
+            if mode == "lysine":
+                pep.append(self.no_k)
             pep.append(self.heavy)
             pep.append(self.light)
             pep.append(self.ratio)
@@ -322,7 +386,7 @@ class Peptide:
             pep.append(self.rt_seconds)
             pep.append(self.ions)
         else:
-            print("shouldnt get here!!")
+            print("shouldnt get here3!!")
             exit(1)
         return pep
 
@@ -342,7 +406,7 @@ class United:
         self.start = start
         self.end = end
         self.ratio_dict = {}
-        if mode == "default":
+        if mode == "default" or mode == "lysine":
             for i in range(num_of_files):
                 self.ratio_dict[i] = ""
         elif mode == "label":
@@ -394,7 +458,7 @@ class United:
         pep.append(self.sum_count)
         pep.append(self.start)
         pep.append(self.end)
-        if mode == "default":
+        if mode == "default" or mode == "lysine":
             for i in range(len(self.ratio_dict)):
                 pep.append(self.ratio_dict[i])
             pep.append(self.avg)
@@ -478,7 +542,7 @@ class Model:
 
     def header_unite_create(self, num_of_files, mode):
         headers = ["seq", "protein", "counter all", "start", "end"]
-        if mode == "default":
+        if mode == "default" or mode == "lysine":
             #assert (mode == 0)
             for i in range(num_of_files):
                 headers.append("ratio" + str(i + 1))
@@ -504,7 +568,11 @@ class Model:
         f = ParserPep(file_name, mode)
         f.parse_dict(error_rate)
         dict_f = f.dict_peptides
-        if mode == "default" :
+        if mode == "lysine":
+            headers = ["seq", "type(semi/full)", "protein", "alternative protein", "probability", "start", "end", "counter",
+                       "k mod heavy", "k mod light", "no k", "sum heavy", "sum light", "ratio"]
+            self.xlsx_create(output_name, dict_f, headers, mode)
+        if mode == "default":
             headers = ["seq", "type(semi/full)", "protein", "alternative protein", "probability", "start", "end", "counter",
                        "n mod heavy", "n mod light", "sum heavy", "sum light", "ratio"]
             self.xlsx_create(output_name, dict_f, headers, mode)
