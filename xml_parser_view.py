@@ -119,7 +119,7 @@ class Controller(tk.Tk):
 
         n = len(self.dict_list)
         assert (n == len(self.files))
-        print("all ok until united")
+        #print("all ok until united")
         #exit(0)
         merge_dict = {}
         for i, d in zip(range(n), self.dict_list):
