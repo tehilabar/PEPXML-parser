@@ -190,7 +190,7 @@ class ParserPep:
                 self.dict_peptides[seq].add_counter()   # in all modes
                 if self.running_mode == "lysine":
                     #print("here")
-                    self.little_test(str(mod))
+                    #self.little_test(str(mod))
                     k_type = self._k_peptide_type(mod)
                     assert (k_type != "bad kitty")
                     self.dict_peptides[seq].add_heavy(heavy)
